@@ -1,61 +1,55 @@
-import { LocalStoreage } from "./LocalStorage.js";
+import { GameState } from "../game/GameState.js";
+import { GameServer } from "./GameServer.js";
+import { Player } from "../models/Player.js";
+import { RemoteController } from "../controllers/RemoteController.js";
 
 export class ConnectionManager {
 
     constructor(){
-        this.players = []
-        this.persister = LocalStoreage
+        this.gameState = GameState.getInstance()
+        this.gameServer = new GameServer()
     }
 
-    persistPlayer(player){
-        const serializedPlayer = player.serialize()
-        this.players.push(serializedPlayer)
-        const players = this.getPlayers()
-        players.push(serializedPlayer)
-        this.storePlayers(players)
-        this.me = player.id
+    addPlayer(player){
+        this.gameState.addPlayer(player)
+        if(player.isLocal()){
+            this.gameServer.addPlayer(player)
+        }
     }
 
-    getPlayers(){
-        return this.persister.getCollection('players') || []
-    }
+    checkAndAddRemotePlayers(spriteGroup) {
+        const playersInLocalState = this.gameState.getPlayers()
+        const playersInServer = this.gameServer.getPlayers()
 
-    storePlayers(players) {
-        this.persister.updateCollection('players', players)
-    }
-
-    newPlayers() {
-        const allPlayers = this.getPlayers()
-        const existingPlayerIds = this.players.map(player => player.id);
-        const newPlayers = allPlayers
-            .filter(playerData => !existingPlayerIds.includes(playerData.id))
-            .map(playerData => {
-            return {
-                ...playerData,
-                actionProvider: {
-                    getNext: this.createActionProvider(playerData.id)
-                }
+        playersInServer.forEach(playerJson => {
+            const existingPlayer = playersInLocalState.find(player => player.id === playerJson.id)
+            if (!existingPlayer) {
+                const player = new Player(spriteGroup, playerJson.id, new RemoteController({
+                    getNext: this.createActionProvider(playerJson.id)
+                }))
+                this.gameState.addPlayer(player)
             }
         })
-        this.players.push(...newPlayers);
-        return newPlayers;
     }
 
     createActionProvider(playerId) {
         return () => {
-            return this.getDynamicsFromStorage(playerId)
+            return this.gameServer.getPlayerDynamics(playerId)
         }
     }
 
-    getDynamicsFromStorage(playerId) {
-        return this.persister.getCollection(`action_${playerId}`)
+    update() {
+        for(const player of this.gameState.getPlayers()) {
+            player.refresh()
+            if(player.isLocal()) {
+                this.gameServer.saveAction(player.getId(), player.getDynamics())
+            }
+        }
     }
 
-    storeAction(player) {
-        this.saveActionToStorage(player.getId(), player.getDynamics())
-    }
-
-    saveActionToStorage(playerId, dynamics) {
-        this.persister.updateCollection(`action_${playerId}`, dynamics) 
+    playerWithHighestScore() { 
+        return this.gameState.players.reduce((highest, current) => {
+            return current.getScore() > highest.getScore() ? current : highest;
+        });
     }
 }

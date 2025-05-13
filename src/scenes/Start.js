@@ -9,7 +9,6 @@ import {
 } from '../game/CollisionHandler.js'
 import { ConnectionManager } from '../multiplayer/ConnectionManager.js';
 import { KeyBoardController } from '../controllers/KeyBoardController.js'
-import { RemoteController } from '../controllers/RemoteController.js';
 
 export class Start extends Phaser.Scene {
 
@@ -46,14 +45,14 @@ export class Start extends Phaser.Scene {
             right:cursors.right,
             left: cursors.left
         }))
-        this.players = [me]
+        this.ConnectionManager.addPlayer(me)
+        this.createPlayerScoreTexts([me])
+
         handlePlatformPlayersCollision(this, this.playerGroup, this.platforms)
         handlePlayersCollision(this, this.playerGroup)
         this.stars = this.createStarts()
         handlePlatformStarsCollision(this, this.stars, this.platforms)
         handlePlayerStarsCollision(this, this.stars, this.playerGroup)
-
-        this.createPlayerScoreTexts(this.players)
 
         this.bombs = this.physics.add.group();
         handleBombPlatformCollision(this, this.bombs, this.platforms)
@@ -74,7 +73,6 @@ export class Start extends Phaser.Scene {
             right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
         })))
         */
-        this.ConnectionManager.persistPlayer(me)
     }
 
     gameTimer() {
@@ -92,9 +90,7 @@ export class Start extends Phaser.Scene {
     timesUp(){
         clearInterval(this.timerIntervalId)
         this.physics.pause();
-        const playerWithHighestScore = this.players.reduce((highest, current) => {
-            return current.getScore() > highest.getScore() ? current : highest;
-        });
+        const playerWithHighestScore = this.ConnectionManager.playerWithHighestScore()
         this.timeText.setText(`${playerWithHighestScore.getName()} win`)
     }
 
@@ -138,16 +134,8 @@ export class Start extends Phaser.Scene {
     }
 
     update() {
-        for(const player of this.players){
-            player.refresh()
-            if(player.storeActions()) {
-                this.ConnectionManager.storeAction(player)
-            }
-        }
-        this.ConnectionManager.newPlayers().forEach((player) => {
-            const newPlayer = new Player(this.playerGroup, player.id, new RemoteController(player.actionProvider))
-            this.players.push(newPlayer)
-        })
+        this.ConnectionManager.update()
+        this.ConnectionManager.checkAndAddRemotePlayers(this.playerGroup)
     }
     
 }

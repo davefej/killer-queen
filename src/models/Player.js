@@ -153,15 +153,19 @@ export class Player {
         return this.score
     }
 
-    serialize() {
+    json() {
         return {
             id: this.id,
             name: this.name
         }
     }
 
-    storeActions()  {
+    isLocal()  {
         return this.controller.needToStoreActions()
+    }
+
+    isRemote() {
+        return !this.isLocal()
     }
 
     getLastAction() {
@@ -180,4 +184,5 @@ export class Player {
         console.log("setPosition", x, y)
         this.sprite.setPosition(x, y)
     }
+
 }

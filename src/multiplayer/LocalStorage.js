@@ -1,12 +1,18 @@
-export class LocalStoreage {
+export class LocalStorage {
 
-    static getCollection(key) {
+    getCollection(key) {
         const collection = localStorage.getItem(key);
         return collection ? JSON.parse(collection) : null;
     }
 
-    static updateCollection(key, value) {
+    updateCollection(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    addToCollection(key, value) {
+        const collection = this.getCollection(key) || [];
+        collection.push(value);
+        this.updateCollection(key, collection);
     }
 
 }
