@@ -1,11 +1,12 @@
 import { Player } from '../models/Player.js'
 import { LocalStorage } from '../multiplayer/LocalStorage.js'
+import { WebSocketStorage } from './WebSocketStorage.js'
 
 export class GameServer {
    
 
     constructor() {
-        this.server = new LocalStorage()
+        this.server = new WebSocketStorage()
     }
 
     addPlayer(player) {

@@ -181,7 +181,6 @@ export class Player {
     }
 
     setPosition(x, y) { 
-        console.log("setPosition", x, y)
         this.sprite.setPosition(x, y)
     }
 
